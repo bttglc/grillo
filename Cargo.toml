@@ -1,0 +1,10 @@
+[package]
+name = "grillo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = "0.4.41"
+clap = "4.5.41"
+rusqlite = "0.37.0"
+serde = "1.0.219"
