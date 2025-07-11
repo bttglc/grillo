@@ -32,3 +32,12 @@ impl Task {
         }
     }
 }
+
+impl TaskStatus {
+    pub fn display_symbol(&self) -> &'static str {
+        match self {
+            TaskStatus::Active => "○",
+            TaskStatus::Done => "✓",
+        }
+    }
+}

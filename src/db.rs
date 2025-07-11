@@ -10,26 +10,35 @@ impl Database {
     pub fn new(path: &str) -> Result<Self> {
         let conn = Connection::open(path)?;
         let db = Database { conn };
-        db.create_tables()?;
-        db.insert_sample_data()?;
+        let is_new = db.create_tables()?;
+        if is_new {
+            db.insert_sample_data()?;
+        }
         Ok(db)
     }
 
-    fn create_tables(&self) -> Result<()> {
-        self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY,
-                description TEXT NOT NULL,
-                created DATETIME NOT NULL,
-                scheduled DATE NOT NULL,
-                deadline DATE,
-                status TEXT NOT NULL,
-                context INTEGER,
-                project INTEGER
-            )",
-            [],
-        )?;
-        Ok(())
+    fn create_tables(&self) -> Result<bool> {
+        let table_exists: bool = self.conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")?
+            .exists([])?;
+        
+        if !table_exists {
+            self.conn.execute(
+                "CREATE TABLE tasks (
+                    id INTEGER PRIMARY KEY,
+                    description TEXT NOT NULL,
+                    created DATETIME NOT NULL,
+                    scheduled DATE NOT NULL,
+                    deadline DATE,
+                    status TEXT NOT NULL,
+                    context INTEGER,
+                    project INTEGER
+                )",
+                [],
+            )?;
+            Ok(true) // Table was created
+        } else {
+            Ok(false) // Table already existed
+        }
     }
 
     pub fn insert_sample_data(&self) -> Result<()> {
@@ -39,7 +48,7 @@ impl Database {
         let tomorrow = today + Duration::days(1);
         let next_week = today + Duration::days(7);
 
-        let samples = [
+        let samples: [(&str, NaiveDate, Option<NaiveDate>, &str, Option<u64>, Option<u64>); 5] = [
             ("Review project proposal", today, None, "Active", Some(1), None),
             ("Buy groceries", today, None, "Active", Some(2), None),
             ("Fix bug in parser", yesterday, None, "Done", Some(3), None),
@@ -119,6 +128,11 @@ impl Database {
         Ok(tasks)
     }
 
+    pub fn complete_task(&self, id: u64) -> Result<()> {
+        self.conn.execute("UPDATE tasks SET status='Done' WHERE id=?1", [id])?;
+        Ok(())
+    }
+
     pub fn delete_task(&self, id: u64) -> Result<()> {
         self.conn.execute("DELETE FROM tasks WHERE id=?1", [id])?;
         Ok(())
@@ -137,7 +151,7 @@ impl Database {
         };
 
         let created_str: String = row.get(2)?;
-        let created = DateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+        let created = DateTime::parse_from_str(&format!("{}+00:00", created_str), "%Y-%m-%d %H:%M:%S%z")
             .map_err(|_| rusqlite::Error::InvalidColumnType(2, "created".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&Utc);
 
@@ -153,7 +167,7 @@ impl Database {
             deadline,
             status,
             context: row.get(6)?,
-            project_id: row.get(7)?,
+            project: row.get(7)?,
         })
     }
 }
