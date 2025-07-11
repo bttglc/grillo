@@ -2,11 +2,15 @@ use rusqlite::{Connection, Result, Row};
 use crate::task::{Task, TaskStatus};
 use chrono::{DateTime, Utc, NaiveDate, Duration};
 
+/// Database abstraction layer for task management
 pub struct Database {
     conn: Connection,
 }
 
 impl Database {
+    /// Creates a new database connection
+    /// - Creates tables if they don't exist
+    /// - Inserts sample data on first run
     pub fn new(path: &str) -> Result<Self> {
         let conn = Connection::open(path)?;
         let db = Database { conn };
@@ -17,6 +21,8 @@ impl Database {
         Ok(db)
     }
 
+    /// Creates the tasks table if it doesn't exist
+    /// Returns true if table was created, false if it already existed
     fn create_tables(&self) -> Result<bool> {
         let table_exists: bool = self.conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")?
             .exists([])?;
@@ -35,12 +41,13 @@ impl Database {
                 )",
                 [],
             )?;
-            Ok(true) // Table was created
+            Ok(true)
         } else {
-            Ok(false) // Table already existed
+            Ok(false)
         }
     }
 
+    /// Inserts GTD-style sample tasks for demonstration
     pub fn insert_sample_data(&self) -> Result<()> {
         let now = Utc::now();
         let today = now.date_naive();
@@ -48,6 +55,7 @@ impl Database {
         let tomorrow = today + Duration::days(1);
         let next_week = today + Duration::days(7);
 
+        // Sample tasks with contexts (1=work, 2=personal, 3=computer)
         let samples: [(&str, NaiveDate, Option<NaiveDate>, &str, Option<u64>, Option<u64>); 5] = [
             ("Review project proposal", today, None, "Active", Some(1), None),
             ("Buy groceries", today, None, "Active", Some(2), None),
@@ -74,6 +82,8 @@ impl Database {
         Ok(())
     }
 
+    /// Saves a task (insert if new, update if existing)
+    /// Updates the task's ID on insert
     pub fn save_task(&self, task: &mut Task) -> Result<()> {
         if task.id.is_none() {
             // Insert new task
@@ -111,6 +121,7 @@ impl Database {
         Ok(())
     }
 
+    /// Retrieves all tasks ordered by scheduled date and ID
     pub fn get_all_tasks(&self) -> Result<Vec<Task>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, description, created, scheduled, deadline, status, context, project 
@@ -128,33 +139,41 @@ impl Database {
         Ok(tasks)
     }
 
+    /// Marks a task as done by ID
     pub fn complete_task(&self, id: u64) -> Result<()> {
         self.conn.execute("UPDATE tasks SET status='Done' WHERE id=?1", [id])?;
         Ok(())
     }
 
+    /// Deletes a task by ID
     pub fn delete_task(&self, id: u64) -> Result<()> {
         self.conn.execute("DELETE FROM tasks WHERE id=?1", [id])?;
         Ok(())
     }
 
+    /// Converts a database row to a Task struct
+    /// Handles date parsing and empty values
     fn row_to_task(&self, row: &Row) -> Result<Task> {
+        // Handle optional deadline
         let deadline_str: Option<String> = row.get(4)?;
         let deadline = deadline_str
             .and_then(|s| if s.is_empty() { None } else { Some(s) })
             .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
 
+        // Parse status enum
         let status_str: String = row.get(5)?;
         let status = match status_str.as_str() {
             "Done" => TaskStatus::Done,
             _ => TaskStatus::Active,
         };
 
+        // Parse created datetime with timezone
         let created_str: String = row.get(2)?;
         let created = DateTime::parse_from_str(&format!("{}+00:00", created_str), "%Y-%m-%d %H:%M:%S%z")
             .map_err(|_| rusqlite::Error::InvalidColumnType(2, "created".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&Utc);
 
+        // Parse scheduled date
         let scheduled_str: String = row.get(3)?;
         let scheduled = NaiveDate::parse_from_str(&scheduled_str, "%Y-%m-%d")
             .map_err(|_| rusqlite::Error::InvalidColumnType(3, "scheduled".to_string(), rusqlite::types::Type::Text))?;
