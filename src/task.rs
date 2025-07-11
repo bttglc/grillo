@@ -2,22 +2,31 @@ use chrono::{DateTime, Local, NaiveDate};
 
 #[derive(Debug, Clone)]
 pub struct Task {
-    pub id: Option<i32>,                    // None for new tasks, Some(id) for saved ones
+    pub id: u64,                            // Only saved tasks have IDs
     pub description: String,                // The text of the task
-    pub created: DateTime<Local>,           // For uniqueness purposes
-    pub date: NaiveDate,                    // When the task should be done
-    pub deadline: Option<DateTime<Local>>,  // Not all tasks have deadlines
+    pub created: DateTime<Utc>,             // For uniqueness purposes
+    pub scheduled: NaiveDate,               // When the task should be done
+    pub deadline: Option<NaiveDate>,        // Not all tasks have deadlines
     pub status: TaskStatus,                 // v. below
-    pub context: Option<String>,            // @home, @computer, etc.
+    pub context: Option<u64>,               // @home, @computer for end user, mapped to ID
 }
 
-impl Default for Task {
+#[derive(Debug, Clone, Default)]
+pub struct Draft {
+    pub description: String,                // The text of the task
+    pub created: DateTime<Utc>,             // For uniqueness purposes
+    pub scheduled: NaiveDate,               // When the task should be done
+    pub deadline: Option<NaiveDate>,        // Not all tasks have deadlines
+    pub status: TaskStatus,                 // v. below
+    pub context: Option<u64>,               // @home, @computer for end user, mapped to ID
+}
+
+impl Default for Draft {
     fn default() -> Task {
         Task {
-            id: None,
             description: String::new(),
-            created: chrono::Local::now(),
-            date: Local::now().date_naive(),
+            created: chrono::Utc::now(),
+            date: chrono::Utc::now().date_naive(),
             deadline: None,
             status: TaskStatus::default(),
             context: None,
@@ -25,7 +34,7 @@ impl Default for Task {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum TaskStatus {
     Active,
     Done,
