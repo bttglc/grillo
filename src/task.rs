@@ -22,11 +22,11 @@ pub struct Draft {
 }
 
 impl Default for Draft {
-    fn default() -> Task {
-        Task {
+    fn default() -> Draft {
+        Draft {
             description: String::new(),
             created: chrono::Utc::now(),
-            date: chrono::Utc::now().date_naive(),
+            scheduled: chrono::Utc::now().date_naive(),
             deadline: None,
             status: TaskStatus::default(),
             context: None,
