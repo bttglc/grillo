@@ -47,7 +47,7 @@ impl Database {
         }
     }
 
-    /// Inserts GTD-style sample tasks for demonstration
+    /// Inserts sample tasks for demonstration
     pub fn insert_sample_data(&self) -> Result<()> {
         let now = Utc::now();
         let today = now.date_naive();
@@ -188,14 +188,5 @@ impl Database {
             context: row.get(6)?,
             project: row.get(7)?,
         })
-    }
-}
-
-impl std::fmt::Display for TaskStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TaskStatus::Active => write!(f, "Active"),
-            TaskStatus::Done => write!(f, "Done"),
-        }
     }
 }
