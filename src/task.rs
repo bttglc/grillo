@@ -2,12 +2,13 @@ use chrono::{DateTime, Utc, NaiveDate};
 
 #[derive(Debug, Clone)]
 pub struct Task {
-    pub id: u64,
+    pub id: Option<u64>,
     pub description: String,
     pub created: DateTime<Utc>,
     pub scheduled: NaiveDate,
     pub deadline: Option<NaiveDate>,
     pub status: TaskStatus,
+    pub project: Option<u64>,
     pub context: Option<u64>,
 }
 
@@ -20,12 +21,13 @@ pub enum TaskStatus {
 impl Task {
     pub fn new() -> Self {
         Self {
-            id: 0,                                 // placeholder
+            id: None,
             description: String::new(),
             created: Utc::now(),
             scheduled: Utc::now().date_naive(),
             deadline: None,
             status: TaskStatus::Active,
+            project: None,
             context: None,
         }
     }
