@@ -6,45 +6,6 @@ use db::Database;
 use parser::{parse_args, CliCommand};
 use task::{Task, TaskStatus};
 
-fn format_description(description: &str, status: &TaskStatus) -> String {
-    let wrapped = wrap_text(description, 30);
-    match status {
-        TaskStatus::Done => format!("\x1b[9m{}\x1b[0m", wrapped),
-        TaskStatus::Active => wrapped,
-    }
-}
-
-fn wrap_text(text: &str, width: usize) -> String {
-    if text.len() <= width {
-        return text.to_string();
-    }
-    
-    let mut result = String::new();
-    let mut current_line = String::new();
-    
-    for word in text.split_whitespace() {
-        if current_line.len() + word.len() + 1 > width {
-            if !current_line.is_empty() {
-                result.push_str(&current_line);
-                result.push('\n');
-                result.push_str(&" ".repeat(10)); // Indent continuation
-                current_line.clear();
-            }
-        }
-        
-        if !current_line.is_empty() {
-            current_line.push(' ');
-        }
-        current_line.push_str(word);
-    }
-    
-    if !current_line.is_empty() {
-        result.push_str(&current_line);
-    }
-    
-    result
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Database::new("tasks.db")?;
     
@@ -67,13 +28,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("No tasks to delete.");
                 } else {
                     println!("Select tasks to delete:");
-                    println!("{:<6} {:<2} {:<30} {}", "ID", "✓", "Description", "Scheduled");
+                    println!("{:<6} {:<2} {:<30} {:<10}", "ID", "✓", "Description", "Scheduled");
                     println!("{}", "-".repeat(50));
                     for task in &tasks {
-                        println!("{:<6} {:<2} {:<30} {}", 
+                        println!("{:<6} {:<2} {:<30} {:<10}", 
                             task.id.unwrap(),
                             task.status.display_symbol(),
-                            format_description(&task.description, &task.status), 
+                            task.description,
                             task.scheduled
                         );
                     }
@@ -109,10 +70,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("No active tasks to mark as done.");
                 } else {
                     println!("Select tasks to mark as done:");
-                    println!("{:<6} {:<2} {:<30} {}", "ID", "✓", "Description", "Scheduled");
+                    println!("{:<6} {:<2} {:<30} {:<10}", "ID", "✓", "Description", "Scheduled");
                     println!("{}", "-".repeat(50));
                     for task in &active_tasks {
-                        println!("{:<6} {:<2} {:<30} {}", 
+                        println!("{:<6} {:<2} {:<30} {:<10}", 
                             task.id.unwrap(),
                             task.status.display_symbol(),
                             task.description, 
@@ -143,13 +104,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if tasks.is_empty() {
                 println!("No tasks found.");
             } else {
-                println!("{:<6} {:<2} {:<30} {}", "ID", "✓", "Description", "Scheduled");
+                println!("{:<6} {:<2} {:<30} {:<10}", "ID", "✓", "Description", "Scheduled");
                 println!("{}", "-".repeat(50));
                 for task in tasks {
-                    println!("{:<6} {:<2} {:<30} {}", 
+                    println!("{:<6} {:<2} {:<30} {:<10}", 
                         task.id.unwrap(),
                         task.status.display_symbol(),
-                        format_description(&task.description, &task.status), 
+                        task.description,
                         task.scheduled
                     );
                 }
